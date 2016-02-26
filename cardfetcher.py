@@ -4,7 +4,7 @@ import json
 import requests
 import time
 
-slack_token = "INSERT YOUR TOKEN HERE"
+slack_token = ""
 
 def get_card(name):
 	query_url = "http://api.deckbrew.com/mtg/cards?name=%s" % name
@@ -125,6 +125,9 @@ if sc.rtm_connect():
 				userinput = input["text"].lower()
 
 				card_trigger = "!card "
+				attachments = ""
+				text = ""
+
 				if userinput.find(card_trigger) > -1:
 					search_term = userinput[userinput.find(card_trigger) + len(card_trigger):]
 					card = get_card(search_term)
@@ -133,12 +136,8 @@ if sc.rtm_connect():
 					if card["value"]["paperValue"] > 0:
 						valueinfo = "\n\nCurrent market price for most recent printing (%s) $%.1f" % (most_recent_printing["set"], card["value"]["paperValue"])
 
-					sc.api_call(
-						"chat.postMessage",
-						channel=input["channel"],
-						attachments='[{"image_url":"%s","title":"%s"}]' % (most_recent_printing["image_url"], card["name"]),
-						text=valueinfo,
-						as_user=True)
+					attachments += '[{"image_url":"%s","title":"%s"}]' % (most_recent_printing["image_url"], card["name"])
+					text += valueinfo
 
 				oracle_trigger = "!oracle "
 				if userinput.find(oracle_trigger) > -1:
@@ -165,11 +164,7 @@ if sc.rtm_connect():
 						valueinfo = "\n\nCurrent market price for most recent printing (%s) - $%.1f (online) $%.1f (paper)" % (most_recent_printing["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
 
 					answer += valueinfo
-					sc.api_call(
-						"chat.postMessage",
-						channel=input["channel"],
-						text=answer,
-						as_user=True)
+					text += answer
 
 				price_trigger = "!price "
 				if userinput.find(price_trigger) > -1:
@@ -180,11 +175,7 @@ if sc.rtm_connect():
 					if card["value"]["paperValue"] > 0:
 						answer = "Current market price for most recent printing of %s (%s) - $%.1f (online) $%.1f (paper)" % (card["name"], most_recent_printing["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
 
-					sc.api_call(
-						"chat.postMessage",
-						channel=input["channel"],
-						text=answer,
-						as_user=True)
+					text += answer
 
 				pwp_trigger = "!pwp "
 				if userinput.find(pwp_trigger) > -1:
@@ -197,11 +188,16 @@ if sc.rtm_connect():
 					else:
 						answer += "eligible for %d GP byes" % byes
 
+					text += answer
+
+				if text or attachments:
 					sc.api_call(
 						"chat.postMessage",
 						channel=input["channel"],
-						text=answer,
+						attachments=attachments,
+						text=text,
 						as_user=True)
+
 		except:
 			print "Boink! Exception swallowed :)"
 			traceback.print_exc()
