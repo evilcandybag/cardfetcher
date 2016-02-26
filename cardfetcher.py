@@ -56,6 +56,51 @@ def get_card_value(card_name, set):
 
 	return {"onlineValue": onlineValue, "paperValue": paperValue}
 
+def get_planeswalker(dci_number):
+	url = "http://www.wizards.com/Magic/PlaneswalkerPoints/JavaScript/GetPointsHistoryModal"
+	headers = {
+		'Pragma': 'no-cache',
+		'Origin': 'http://www.wizards.com',
+		'Accept-Encoding': 'gzip, deflate',
+		'Accept-Language': 'en-US,en;q=0.8,de;q=0.6,sv;q=0.4',
+		'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36',
+		'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+		'Accept': '*/*',
+		'Cache-Control': 'no-cache',
+		'X-Requested-With': 'XMLHttpRequest',
+		'Cookie': 'f5_cspm=1234; BIGipServerWWWPWPPOOL01=353569034.20480.0000; __utmt=1; BIGipServerWWWPool1=3792701706.20480.0000; PlaneswalkerPointsSettings=0=0&lastviewed=9212399887; __utma=75931667.1475261136.1456488297.1456488297.1456488297.1; __utmb=75931667.5.10.1456488297; __utmc=75931667; __utmz=75931667.1456488297.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)',
+		'Connection': 'keep-alive',
+		'Referer': 'http://www.wizards.com/Magic/PlaneswalkerPoints/%s' % dci_number
+	}
+	data = {"Parameters":{"DCINumber":dci_number,"SelectedType":"Yearly"}}
+	response = requests.post(url, headers=headers, data=json.dumps(data))
+
+	seasons = []
+
+	response_data = json.loads(response.content)
+	markup = response_data["ModalContent"]
+	search_position = markup.find("SeasonRange")
+
+	while search_position != -1:
+		pointsvalue = "PointsValue\">"
+		search_position = markup.find(pointsvalue, search_position)
+		search_position += len(pointsvalue)
+		end_position = markup.find("</div>", search_position)
+		if end_position != -1:
+			value = markup[search_position:end_position]
+			seasons.append(int(value))
+		search_position = markup.find("SeasonRange", search_position)
+
+	return {"current_season": seasons[0], "last_season": seasons[1]}
+
+def get_planeswalker_byes(walker):
+	if walker["current_season"] >= 2250 or walker["last_season"] >= 2250:
+		return 2
+	elif walker["current_season"] >= 1300 or walker["last_season"] >= 1300:
+		return 1
+
+	return 0
+
 def emoji_filter(input):
 	ret = input.replace("{", ":_")
 	ret = ret.replace("}", "_:")
@@ -134,6 +179,23 @@ if sc.rtm_connect():
 					answer = "Unable to find price information for %s" % card["name"]
 					if card["value"]["paperValue"] > 0:
 						answer = "Current market price for most recent printing of %s (%s) - $%.1f (online) $%.1f (paper)" % (card["name"], most_recent_printing["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
+
+					sc.api_call(
+						"chat.postMessage",
+						channel=input["channel"],
+						text=answer,
+						as_user=True)
+
+				pwp_trigger = "!pwp "
+				if userinput.find(pwp_trigger) > -1:
+					search_term = userinput[userinput.find(pwp_trigger) + len(pwp_trigger):]
+					planeswalker = get_planeswalker(search_term)
+					answer = "DCI# %s has %s points in the current season, %s points last season\nCurrently " % (search_term, planeswalker["current_season"], planeswalker["last_season"])
+					byes = get_planeswalker_byes(planeswalker)
+					if not byes:
+						answer += "not eligible for GP byes"
+					else:
+						answer += "eligible for %d GP byes" % byes
 
 					sc.api_call(
 						"chat.postMessage",
