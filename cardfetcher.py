@@ -11,6 +11,9 @@ def getCard(name):
 	r = requests.get(queryUrl)
 	cards = r.json()
 
+	if len(cards) < 1:
+		return None
+
 	card = cards[0]
 	bestMatch = None
 	for cardIter in cards:
@@ -115,6 +118,103 @@ def emojiFilter(input):
 
 	return ret
 
+def handleInput(input):
+	try:
+		if input.has_key("text"):
+			userinput = input["text"].lower()
+
+			cardTrigger = "!card "
+			attachments = ""
+			text = ""
+			notFound = "No results found"
+
+			if userinput.find(cardTrigger) > -1:
+				searchTerm = userinput[userinput.find(cardTrigger) + len(cardTrigger):]
+				card = getCard(searchTerm)
+				if not card:
+					text += notFound
+				else:
+					mostRecentPrinting = card["editions"][0]
+					valueinfo = ""
+					if card["value"]["paperValue"] > 0:
+						valueinfo = "\n\nCurrent market price for most recent printing (%s) $%.1f" % (mostRecentPrinting["set"], card["value"]["paperValue"])
+
+					attachments += '[{"image_url":"%s","title":"%s"}]' % (mostRecentPrinting["image_url"], card["name"].replace("\"", "\\\""))
+					text += valueinfo
+
+			oracleTrigger = "!oracle "
+			if userinput.find(oracleTrigger) > -1:
+				searchTerm = userinput[userinput.find(oracleTrigger) + len(oracleTrigger):]
+				card = getCard(searchTerm)
+				if not card:
+					text += notFound
+				else:
+					mostRecentPrinting = card["editions"][0]
+					typeline = ""
+					if card.has_key("supertypes"):
+						for supertype in card["supertypes"]:
+							typeline += supertype.capitalize() + " "
+					if card.has_key("types"):
+						for cardtype in card["types"]:
+							typeline += cardtype.capitalize() + " "
+						if card.has_key("subtypes"):
+							typeline += "- "
+					if card.has_key("subtypes"):
+						for subtype in card["subtypes"]:
+							typeline += subtype.capitalize() + " "
+					answer = "%s\t\t%s\n%s\n%s" % (card["name"], emojiFilter(card["cost"]), typeline, emojiFilter(card["text"]))
+					valueinfo = ""
+					if card.has_key("power") and card.has_key("toughness"):
+						answer += "\n*`%s/%s`*" % (card["power"], card["toughness"])
+					if card["value"]["paperValue"] > 0:
+						valueinfo = "\n\nCurrent market price for most recent printing (%s) - $%.1f (online) $%.1f (paper)" % (mostRecentPrinting["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
+
+					answer += valueinfo
+					text += answer
+
+			priceTrigger = "!price "
+			if userinput.find(priceTrigger) > -1:
+				searchTerm = userinput[userinput.find(priceTrigger) + len(priceTrigger):]
+				card = getCard(searchTerm)
+				if not card:
+					text += notFound
+				else:
+					mostRecentPrinting = card["editions"][0]
+					answer = "Unable to find price information for %s" % card["name"]
+					if card["value"]["paperValue"] > 0:
+						answer = "Current market price for most recent printing of %s (%s) - $%.1f (online) $%.1f (paper)" % (card["name"], mostRecentPrinting["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
+
+					text += answer
+
+			pwpTrigger = "!pwp "
+			if userinput.find(pwpTrigger) > -1:
+				searchTerm = userinput[userinput.find(pwpTrigger) + len(pwpTrigger):]
+				planeswalker = getPlaneswalker(searchTerm)
+				answer = "DCI# %s has %s points in the current season, %s points last season\nCurrently " % (searchTerm, planeswalker["currentSeason"], planeswalker["lastSeason"])
+				byes = getPlaneswalkerByes(planeswalker)
+				if not byes:
+					answer += "not eligible for GP byes"
+				else:
+					answer += "eligible for %d GP byes" % byes
+
+				text += answer
+
+
+			print text
+			print attachments
+
+			if text or attachments:
+				sc.api_call(
+					"chat.postMessage",
+					channel=input["channel"],
+					attachments=attachments,
+					text=text,
+					as_user=True)
+
+	except:
+		print "Boink! Exception swallowed :)"
+		traceback.print_exc()
+
 if __name__ == "__main__":
 	if len(sys.argv) < 2:
 		print "Usage: %s [client_secret_file.json]" % sys.argv[0]
@@ -126,90 +226,6 @@ if __name__ == "__main__":
 
 		sc = slackclient.SlackClient(slackToken)
 		if sc.rtm_connect():
-
-			def handleInput(input):
-				try:
-					if input.has_key("text"):
-						userinput = input["text"].lower()
-
-						cardTrigger = "!card "
-						attachments = ""
-						text = ""
-
-						if userinput.find(cardTrigger) > -1:
-							searchTerm = userinput[userinput.find(cardTrigger) + len(cardTrigger):]
-							card = getCard(searchTerm)
-							mostRecentPrinting = card["editions"][0]
-							valueinfo = ""
-							if card["value"]["paperValue"] > 0:
-								valueinfo = "\n\nCurrent market price for most recent printing (%s) $%.1f" % (mostRecentPrinting["set"], card["value"]["paperValue"])
-
-							attachments += '[{"image_url":"%s","title":"%s"}]' % (mostRecentPrinting["image_url"], card["name"])
-							text += valueinfo
-
-						oracleTrigger = "!oracle "
-						if userinput.find(oracleTrigger) > -1:
-							searchTerm = userinput[userinput.find(oracleTrigger) + len(oracleTrigger):]
-							card = getCard(searchTerm)
-							mostRecentPrinting = card["editions"][0]
-							typeline = ""
-							if card.has_key("supertypes"):
-								for supertype in card["supertypes"]:
-									typeline += supertype.capitalize() + " "
-							if card.has_key("types"):
-								for cardtype in card["types"]:
-									typeline += cardtype.capitalize() + " "
-								if card.has_key("subtypes"):
-									typeline += "- "
-							if card.has_key("subtypes"):
-								for subtype in card["subtypes"]:
-									typeline += subtype.capitalize() + " "
-							answer = "%s\t\t%s\n%s\n%s" % (card["name"], emojiFilter(card["cost"]), typeline, emojiFilter(card["text"]))
-							valueinfo = ""
-							if card.has_key("power") and card.has_key("toughness"):
-								answer += "\n*`%s/%s`*" % (card["power"], card["toughness"])
-							if card["value"]["paperValue"] > 0:
-								valueinfo = "\n\nCurrent market price for most recent printing (%s) - $%.1f (online) $%.1f (paper)" % (mostRecentPrinting["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
-
-							answer += valueinfo
-							text += answer
-
-						priceTrigger = "!price "
-						if userinput.find(priceTrigger) > -1:
-							searchTerm = userinput[userinput.find(priceTrigger) + len(priceTrigger):]
-							card = getCard(searchTerm)
-							mostRecentPrinting = card["editions"][0]
-							answer = "Unable to find price information for %s" % card["name"]
-							if card["value"]["paperValue"] > 0:
-								answer = "Current market price for most recent printing of %s (%s) - $%.1f (online) $%.1f (paper)" % (card["name"], mostRecentPrinting["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
-
-							text += answer
-
-						pwpTrigger = "!pwp "
-						if userinput.find(pwpTrigger) > -1:
-							searchTerm = userinput[userinput.find(pwpTrigger) + len(pwpTrigger):]
-							planeswalker = getPlaneswalker(searchTerm)
-							answer = "DCI# %s has %s points in the current season, %s points last season\nCurrently " % (searchTerm, planeswalker["currentSeason"], planeswalker["lastSeason"])
-							byes = getPlaneswalkerByes(planeswalker)
-							if not byes:
-								answer += "not eligible for GP byes"
-							else:
-								answer += "eligible for %d GP byes" % byes
-
-							text += answer
-
-						if text or attachments:
-							sc.api_call(
-								"chat.postMessage",
-								channel=input["channel"],
-								attachments=attachments,
-								text=text,
-								as_user=True)
-
-				except:
-					print "Boink! Exception swallowed :)"
-					traceback.print_exc()
-
 			while True:
 				for reply in sc.rtm_read():
 					handleInput(reply)
