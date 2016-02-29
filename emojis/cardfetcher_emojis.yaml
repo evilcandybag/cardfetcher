@@ -1,0 +1,102 @@
+title: cardfetcher
+emojis:
+  - name: _0_
+      src: 0.gif
+  - name: _1_
+      src: 1.gif
+  - name: _10_
+      src: 10.gif
+  - name: _11_
+      src: 11.gif
+  - name: _12_
+      src: 12.gif
+  - name: _13_
+      src: 13.gif
+  - name: _14_
+      src: 14.gif
+  - name: _15_
+      src: 15.gif
+  - name: _16_
+      src: 16.gif
+  - name: _2_
+      src: 2.gif
+  - name: _2b_
+      src: 2b.gif
+  - name: _2g_
+      src: 2g.gif
+  - name: _2r_
+      src: 2r.gif
+  - name: _2u_
+      src: 2u.gif
+  - name: _2w_
+      src: 2w.gif
+  - name: _3_
+      src: 3.gif
+  - name: _4_
+      src: 4.gif
+  - name: _5_
+      src: 5.gif
+  - name: _6_
+      src: 6.gif
+  - name: _7_
+      src: 7.gif
+  - name: _8_
+      src: 8.gif
+  - name: _9_
+      src: 9.gif
+  - name: _b_
+      src: b.gif
+  - name: _bg_
+      src: bg.gif
+  - name: _bp_
+      src: bp.gif
+  - name: _br_
+      src: br.gif
+  - name: _c_
+      src: c.png
+  - name: _g_
+      src: g.gif
+  - name: _gp_
+      src: gp.gif
+  - name: _gu_
+      src: gu.gif
+  - name: _gw_
+      src: gw.gif
+  - name: _p_
+      src: p.gif
+  - name: _q_
+      src: q.gif
+  - name: _r_
+      src: r.gif
+  - name: _rg_
+      src: rg.gif
+  - name: _rp_
+      src: rp.gif
+  - name: _rw_
+      src: rw.gif
+  - name: _s_
+      src: s.gif
+  - name: _t_
+      src: t.gif
+  - name: _u_
+      src: u.gif
+  - name: _ub_
+      src: ub.gif
+  - name: _up_
+      src: up.gif
+  - name: _ur_
+      src: ur.gif
+  - name: _w_
+      src: w.gif
+  - name: _wb_
+      src: wb.gif
+  - name: _wp_
+      src: wp.gif
+  - name: _wu_
+      src: wu.gif
+  - name: _x_
+      src: x.png
+  - name: _y_
+      src: y.png
+  - name: _z_
+      src: z.png
