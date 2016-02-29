@@ -1,0 +1,2 @@
+clientsecret.*.json
+!clientsecret.example.json

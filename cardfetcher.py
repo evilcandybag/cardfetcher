@@ -3,8 +3,7 @@ import slackclient
 import json
 import requests
 import time
-
-slack_token = ""
+import sys
 
 def get_card(name):
 	query_url = "http://api.deckbrew.com/mtg/cards?name=%s" % name
@@ -116,95 +115,104 @@ def emoji_filter(input):
 
 	return ret
 
-sc = slackclient.SlackClient(slack_token)
-if sc.rtm_connect():
+if __name__ == "__main__":
+	if len(sys.argv) < 2:
+		print "Usage: %s [client_secret_file.json]" % sys.argv[0]
+	else:
+		slack_token = ""
+		with open(sys.argv[1]) as clientSecret:
+			data = json.loads(clientSecret.read())
+			slack_token = data["slackToken"]
 
-	def handle_input(input):
-		try:
-			if input.has_key("text"):
-				userinput = input["text"].lower()
+		sc = slackclient.SlackClient(slack_token)
+		if sc.rtm_connect():
 
-				card_trigger = "!card "
-				attachments = ""
-				text = ""
+			def handle_input(input):
+				try:
+					if input.has_key("text"):
+						userinput = input["text"].lower()
 
-				if userinput.find(card_trigger) > -1:
-					search_term = userinput[userinput.find(card_trigger) + len(card_trigger):]
-					card = get_card(search_term)
-					most_recent_printing = card["editions"][0]
-					valueinfo = ""
-					if card["value"]["paperValue"] > 0:
-						valueinfo = "\n\nCurrent market price for most recent printing (%s) $%.1f" % (most_recent_printing["set"], card["value"]["paperValue"])
+						card_trigger = "!card "
+						attachments = ""
+						text = ""
 
-					attachments += '[{"image_url":"%s","title":"%s"}]' % (most_recent_printing["image_url"], card["name"])
-					text += valueinfo
+						if userinput.find(card_trigger) > -1:
+							search_term = userinput[userinput.find(card_trigger) + len(card_trigger):]
+							card = get_card(search_term)
+							most_recent_printing = card["editions"][0]
+							valueinfo = ""
+							if card["value"]["paperValue"] > 0:
+								valueinfo = "\n\nCurrent market price for most recent printing (%s) $%.1f" % (most_recent_printing["set"], card["value"]["paperValue"])
 
-				oracle_trigger = "!oracle "
-				if userinput.find(oracle_trigger) > -1:
-					search_term = userinput[userinput.find(oracle_trigger) + len(oracle_trigger):]
-					card = get_card(search_term)
-					most_recent_printing = card["editions"][0]
-					typeline = ""
-					if card.has_key("supertypes"):
-						for supertype in card["supertypes"]:
-							typeline += supertype.capitalize() + " "
-					if card.has_key("types"):
-						for cardtype in card["types"]:
-							typeline += cardtype.capitalize() + " "
-						if card.has_key("subtypes"):
-							typeline += "- "
-					if card.has_key("subtypes"):
-						for subtype in card["subtypes"]:
-							typeline += subtype.capitalize() + " "
-					answer = "%s\t\t%s\n%s\n%s" % (card["name"], emoji_filter(card["cost"]), typeline, emoji_filter(card["text"]))
-					valueinfo = ""
-					if card.has_key("power") and card.has_key("toughness"):
-						answer += "\n*`%s/%s`*" % (card["power"], card["toughness"])
-					if card["value"]["paperValue"] > 0:
-						valueinfo = "\n\nCurrent market price for most recent printing (%s) - $%.1f (online) $%.1f (paper)" % (most_recent_printing["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
+							attachments += '[{"image_url":"%s","title":"%s"}]' % (most_recent_printing["image_url"], card["name"])
+							text += valueinfo
 
-					answer += valueinfo
-					text += answer
+						oracle_trigger = "!oracle "
+						if userinput.find(oracle_trigger) > -1:
+							search_term = userinput[userinput.find(oracle_trigger) + len(oracle_trigger):]
+							card = get_card(search_term)
+							most_recent_printing = card["editions"][0]
+							typeline = ""
+							if card.has_key("supertypes"):
+								for supertype in card["supertypes"]:
+									typeline += supertype.capitalize() + " "
+							if card.has_key("types"):
+								for cardtype in card["types"]:
+									typeline += cardtype.capitalize() + " "
+								if card.has_key("subtypes"):
+									typeline += "- "
+							if card.has_key("subtypes"):
+								for subtype in card["subtypes"]:
+									typeline += subtype.capitalize() + " "
+							answer = "%s\t\t%s\n%s\n%s" % (card["name"], emoji_filter(card["cost"]), typeline, emoji_filter(card["text"]))
+							valueinfo = ""
+							if card.has_key("power") and card.has_key("toughness"):
+								answer += "\n*`%s/%s`*" % (card["power"], card["toughness"])
+							if card["value"]["paperValue"] > 0:
+								valueinfo = "\n\nCurrent market price for most recent printing (%s) - $%.1f (online) $%.1f (paper)" % (most_recent_printing["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
 
-				price_trigger = "!price "
-				if userinput.find(price_trigger) > -1:
-					search_term = userinput[userinput.find(price_trigger) + len(price_trigger):]
-					card = get_card(search_term)
-					most_recent_printing = card["editions"][0]
-					answer = "Unable to find price information for %s" % card["name"]
-					if card["value"]["paperValue"] > 0:
-						answer = "Current market price for most recent printing of %s (%s) - $%.1f (online) $%.1f (paper)" % (card["name"], most_recent_printing["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
+							answer += valueinfo
+							text += answer
 
-					text += answer
+						price_trigger = "!price "
+						if userinput.find(price_trigger) > -1:
+							search_term = userinput[userinput.find(price_trigger) + len(price_trigger):]
+							card = get_card(search_term)
+							most_recent_printing = card["editions"][0]
+							answer = "Unable to find price information for %s" % card["name"]
+							if card["value"]["paperValue"] > 0:
+								answer = "Current market price for most recent printing of %s (%s) - $%.1f (online) $%.1f (paper)" % (card["name"], most_recent_printing["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
 
-				pwp_trigger = "!pwp "
-				if userinput.find(pwp_trigger) > -1:
-					search_term = userinput[userinput.find(pwp_trigger) + len(pwp_trigger):]
-					planeswalker = get_planeswalker(search_term)
-					answer = "DCI# %s has %s points in the current season, %s points last season\nCurrently " % (search_term, planeswalker["current_season"], planeswalker["last_season"])
-					byes = get_planeswalker_byes(planeswalker)
-					if not byes:
-						answer += "not eligible for GP byes"
-					else:
-						answer += "eligible for %d GP byes" % byes
+							text += answer
 
-					text += answer
+						pwp_trigger = "!pwp "
+						if userinput.find(pwp_trigger) > -1:
+							search_term = userinput[userinput.find(pwp_trigger) + len(pwp_trigger):]
+							planeswalker = get_planeswalker(search_term)
+							answer = "DCI# %s has %s points in the current season, %s points last season\nCurrently " % (search_term, planeswalker["current_season"], planeswalker["last_season"])
+							byes = get_planeswalker_byes(planeswalker)
+							if not byes:
+								answer += "not eligible for GP byes"
+							else:
+								answer += "eligible for %d GP byes" % byes
 
-				if text or attachments:
-					sc.api_call(
-						"chat.postMessage",
-						channel=input["channel"],
-						attachments=attachments,
-						text=text,
-						as_user=True)
+							text += answer
 
-		except:
-			print "Boink! Exception swallowed :)"
-			traceback.print_exc()
+						if text or attachments:
+							sc.api_call(
+								"chat.postMessage",
+								channel=input["channel"],
+								attachments=attachments,
+								text=text,
+								as_user=True)
 
-	while True:
-		for reply in sc.rtm_read():
-			handle_input(reply)
-		time.sleep(0.01)
-else:
-	print "Connection Failed, invalid token?"
+				except:
+					print "Boink! Exception swallowed :)"
+					traceback.print_exc()
+
+			while True:
+				for reply in sc.rtm_read():
+					handle_input(reply)
+				time.sleep(0.01)
+		else:
+			print "Connection Failed, invalid token?"
