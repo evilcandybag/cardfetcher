@@ -24,39 +24,42 @@ def getCard(name):
 
 	mostRecent = card["editions"][0]
 	try:
-		card["value"] = getCardValue(card["name"], mostRecent["set"].replace(" ", "+"))
+		card["value"] = getCardValueNew(card["name"], mostRecent["set_id"])
 	except:
 		print "Price fetch threw up"
 		traceback.print_exc()
-		card["value"] = {"onlineValue": 0, "paperValue": 0}
+		card["value"] = 0
 
 	return card
 
-def getCardValue(cardName, set):
-	url = "http://www.mtggoldfish.com/price/%s/%s" % (set, cardName.replace(" ", "%20"))
-	print url
-	data = requests.get(url).content
+def findIndexOfSequence(data, sequence, startIndex = 0):
+	index = startIndex
+	for token in sequence:
+		index = data.find(token, index)
+		if index == -1:
+			return -1
 
-	def findValue(data, realm):
-		pos = data.find("price-box %s" % realm)
-		marker = "price-box-price"
-		pos = data.find(marker, pos)
-		pos += len(marker) + 2
-		endPos = data.find("<", pos)
-		return float(data[pos:endPos])
+	return index + len(sequence[-1])
 
-	onlineValue = -1
-	paperValue = -1
-	try:
-		onlineValue = findValue(data, "online")
-	except:
-		pass
-	try:
-		paperValue = findValue(data, "paper")
-	except:
-		pass
+def getCardValueNew(cardName, setCode):
+	url = "http://www.mtggoldfish.com/widgets/autocard/%s [%s]" % (cardName, setCode)
+	headers = {
+		'Pragma': 'no-cache',
+		'Accept-Encoding': 'gzip, deflate, sdch',
+		'Accept-Language': 'en-US,en;q=0.8,de;q=0.6,sv;q=0.4',
+		'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36',
+		'Accept': 'text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01',
+		'Referer': 'http://www.mtggoldfish.com/widgets/autocard/%s' % cardName,
+		'X-Requested-With': 'XMLHttpRequest',
+		'Connection': 'keep-alive',
+		'Cache-Control': 'no-cache'
+	}
+	response = requests.get(url, headers=headers)
+	index = findIndexOfSequence(response.content, ["tcgplayer", "btn-shop-price", "$"])
+	endIndex = response.content.find("\\n", index)
+	value = float(response.content[index+2:endIndex].replace(",", ""))
 
-	return {"onlineValue": onlineValue, "paperValue": paperValue}
+	return value
 
 def getPlaneswalker(dciNumber):
 	url = "http://www.wizards.com/Magic/PlaneswalkerPoints/JavaScript/GetPointsHistoryModal"
@@ -136,8 +139,8 @@ def handleInput(input):
 				else:
 					mostRecentPrinting = card["editions"][0]
 					valueinfo = ""
-					if card["value"]["paperValue"] > 0:
-						valueinfo = "\n\nCurrent market price for most recent printing (%s) $%.1f" % (mostRecentPrinting["set"], card["value"]["paperValue"])
+					if card["value"] > 0:
+						valueinfo = "\n\nCurrent market price for most recent printing (%s) $%.1f" % (mostRecentPrinting["set"], card["value"])
 
 					attachments += '[{"image_url":"%s","title":"%s"}]' % (mostRecentPrinting["image_url"], card["name"].replace("\"", "\\\""))
 					text += valueinfo
@@ -166,8 +169,8 @@ def handleInput(input):
 					valueinfo = ""
 					if card.has_key("power") and card.has_key("toughness"):
 						answer += "\n*`%s/%s`*" % (card["power"], card["toughness"])
-					if card["value"]["paperValue"] > 0:
-						valueinfo = "\n\nCurrent market price for most recent printing (%s) - $%.1f (online) $%.1f (paper)" % (mostRecentPrinting["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
+					if card["value"] > 0:
+						valueinfo = "\n\nCurrent market price for most recent printing (%s) - $%.1f" % (mostRecentPrinting["set"], card["value"])
 
 					answer += valueinfo
 					text += answer
@@ -181,8 +184,8 @@ def handleInput(input):
 				else:
 					mostRecentPrinting = card["editions"][0]
 					answer = "Unable to find price information for %s" % card["name"]
-					if card["value"]["paperValue"] > 0:
-						answer = "Current market price for most recent printing of %s (%s) - $%.1f (online) $%.1f (paper)" % (card["name"], mostRecentPrinting["set"], card["value"]["onlineValue"], card["value"]["paperValue"])
+					if card["value"] > 0:
+						answer = "Current market price for most recent printing of %s (%s) - $%.1f" % (card["name"], mostRecentPrinting["set"], card["value"])
 
 					text += answer
 
@@ -199,9 +202,8 @@ def handleInput(input):
 
 				text += answer
 
-
-			print text
-			print attachments
+			#print text
+			#print attachments
 
 			if text or attachments:
 				sc.api_call(
