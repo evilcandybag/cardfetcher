@@ -5,28 +5,6 @@ import requests
 import time
 import sys
 
-def getCard(name):
-	queryUrl = "http://api.deckbrew.com/mtg/cards?name=%s" % name
-	print queryUrl
-	r = requests.get(queryUrl)
-	cards = r.json()
-
-	if len(cards) < 1:
-		return None
-
-	card = cards[0]
-	bestMatch = None
-	for cardIter in cards:
-		pos = cardIter["name"].lower().find(name)
-		if bestMatch is None or (pos != -1 and pos < bestMatch):
-			bestMatch = pos
-			card = cardIter
-
-	mostRecent = card["editions"][0]
-	card["value"] = getCardValueNew(card["name"], mostRecent["set_id"])
-
-	return card
-
 def findIndexOfSequence(data, sequence, startIndex = 0):
 	index = startIndex
 	for token in sequence:
@@ -36,7 +14,7 @@ def findIndexOfSequence(data, sequence, startIndex = 0):
 
 	return index + len(sequence[-1])
 
-def getCardValueNew(cardName, setCode):
+def getCardValue(cardName, setCode):
 	url = "http://www.mtggoldfish.com/widgets/autocard/%s [%s]" % (cardName, setCode)
 	headers = {
 		'Pragma': 'no-cache',
@@ -55,6 +33,28 @@ def getCardValueNew(cardName, setCode):
 	value = float(response.content[index+2:endIndex].replace(",", ""))
 
 	return value
+
+def getCard(name):
+	queryUrl = "http://api.deckbrew.com/mtg/cards?name=%s" % name
+	print queryUrl
+	r = requests.get(queryUrl)
+	cards = r.json()
+
+	if len(cards) < 1:
+		return None
+
+	card = cards[0]
+	bestMatch = None
+	for cardIter in cards:
+		pos = cardIter["name"].lower().find(name)
+		if bestMatch is None or (pos != -1 and pos < bestMatch):
+			bestMatch = pos
+			card = cardIter
+
+	mostRecent = card["editions"][0]
+	card["value"] = getCardValue(card["name"], mostRecent["set_id"])
+
+	return card
 
 def getPlaneswalker(dciNumber):
 	url = "http://www.wizards.com/Magic/PlaneswalkerPoints/JavaScript/GetPointsHistoryModal"
