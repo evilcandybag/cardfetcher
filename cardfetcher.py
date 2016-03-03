@@ -30,7 +30,10 @@ def getCardValue(cardName, setCode):
 	response = requests.get(url, headers=headers)
 	index = findIndexOfSequence(response.content, ["tcgplayer", "btn-shop-price", "$"])
 	endIndex = response.content.find("\\n", index)
-	value = float(response.content[index+2:endIndex].replace(",", ""))
+	try:
+		value = float(response.content[index+2:endIndex].replace(",", ""))
+	except ValueError:
+		value = 0
 
 	return value
 
@@ -203,7 +206,6 @@ def handleInput(input):
 				attachments=attachments,
 				text=text,
 				as_user=True)
-
 
 if __name__ == "__main__":
 	if len(sys.argv) < 2:
