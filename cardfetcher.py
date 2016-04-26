@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import traceback
 import slackclient
 import json
@@ -199,6 +200,16 @@ def handleInput(input):
 
 			text += answer
 
+		crTrigger = "!cr "
+		if userinput.find(crTrigger) > -1:
+			searchTerm = userinput[userinput.find(crTrigger) + len(crTrigger):]
+			rule = getRule(searchTerm)
+			if rule:
+				answer = "%s - %s" % (searchTerm, rule)
+			else:
+				answer = "No result found"
+			text += answer
+
 		if text or attachments:
 			sc.api_call(
 				"chat.postMessage",
@@ -207,7 +218,27 @@ def handleInput(input):
 				text=text,
 				as_user=True)
 
+compRulesUrl = "http://media.wizards.com/2016/docs/MagicCompRules_04082016.txt"
+compRulesLookup = {}
+
+def getCompRules():
+	r = requests.get(compRulesUrl)
+	rules = r.text.encode("utf-8")
+	for rule in rules.split("\n"):
+		compRulesLookup[rule.split(" ")[0]] = " ".join(rule.split(" ")[1:])
+
+	return compRulesLookup
+
+def getRule(ruleKey):
+	if not compRulesLookup.has_key(ruleKey):
+		ruleKey = ruleKey[:-1]
+	if not compRulesLookup.has_key(ruleKey):
+		return None
+
+	return compRulesLookup[ruleKey]
+
 if __name__ == "__main__":
+	getCompRules()
 	if len(sys.argv) < 2:
 		print "Usage: %s [client_secret_file.json]" % sys.argv[0]
 	else:
