@@ -225,16 +225,17 @@ def getCompRules():
 	r = requests.get(compRulesUrl)
 	rules = r.text.encode("utf-8")
 	for rule in rules.split("\n"):
-		compRulesLookup[rule.split(" ")[0]] = " ".join(rule.split(" ")[1:])
-
+		compRulesLookup[rule.split(" ")[0]] = (" ".join(rule.split(" ")[1:])).decode("Windows.1252").replace(u"Â","")
 	return compRulesLookup
 
 def getRule(ruleKey):
 	if not compRulesLookup.has_key(ruleKey):
-		ruleKey = ruleKey[:-1]
+		if ruleKey[-1:] == ".":
+			ruleKey = ruleKey[:-1]
+	if not compRulesLookup.has_key(ruleKey):
+		ruleKey += "."
 	if not compRulesLookup.has_key(ruleKey):
 		return None
-
 	return compRulesLookup[ruleKey]
 
 if __name__ == "__main__":
